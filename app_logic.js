@@ -4,9 +4,7 @@ var currentDesign = "Eid1.jpeg";
 var allTextConfigs = null; // Will hold all configs from text_configs.json
 
 // --- Admin Mode Related Global Variables ---
-// Note: isAdminModeActive is effectively deprecated for index.html after UI removal.
-// It's not actively used to gate functionality on admin.html as that page is inherently admin-focused.
-var isAdminModeActive = false;
+// Note: isAdminModeActive is now effectively removed/unused.
 var currentImageOriginalWidth = null;
 var currentImageOriginalHeight = null;
 
@@ -49,7 +47,8 @@ async function loadAllTextConfigs() {
         console.log("Text configurations loaded successfully from text_configs.json.");
     } catch (error) {
         console.error("Failed to load text_configs.json:", error);
-        allTextConfigs = { fitr: {}, adha: {} }; // Provide a basic empty structure on error
+        // Ensures downstream functions don't try to access keys on null if loading fails.
+        allTextConfigs = { fitr: {}, adha: {} };
     }
 }
 
@@ -106,13 +105,9 @@ function initializeAdminPage() {
         if (adminFontFamilySelect) { $(adminFontFamilySelect).select2(); }
     } else { console.warn("jQuery or Select2 not available for adminFontFamily select on admin.html."); }
 
-    // Set initial theme for admin page based on its select element's default
     if (adminEidThemeSelect) {
-        currentEidTheme = adminEidThemeSelect.value;
-    }
-    populateAdminImageSelect();
-
-    if (adminEidThemeSelect) {
+        currentEidTheme = adminEidThemeSelect.value; // Set initial theme for admin
+        // Handle theme selection change
         adminEidThemeSelect.addEventListener('change', function() {
             currentEidTheme = this.value;
             populateAdminImageSelect();
@@ -122,7 +117,9 @@ function initializeAdminPage() {
             }
         });
     }
+    populateAdminImageSelect(); // Initial population based on currentEidTheme
 
+    // Handle image design selection change
     if (adminImageSelect) {
         adminImageSelect.addEventListener('change', function() {
             currentDesign = this.value;
@@ -130,21 +127,26 @@ function initializeAdminPage() {
         });
     }
 
+    // Handle font family change for preview
     if (adminFontFamilySelect) {
         adminFontFamilySelect.addEventListener('change', function() {
             if (currentDesign) loadAdminImage();
         });
     }
 
+    // Setup "Generate JSON" button
     if (adminGenerateJsonBtn) {
         adminGenerateJsonBtn.addEventListener('click', generateAdminJsonConfig);
     }
 
+    // Always listen for canvas clicks on admin page
     setupAdminCanvasListener(true, 'adminCanvas');
 
+    // Load initial image and config
     if (adminImageSelect.options.length > 0) {
-        currentDesign = adminImageSelect.value;
-        loadAdminImage();
+        // currentDesign might have been set by populateAdminImageSelect, or use the first option
+        currentDesign = adminImageSelect.value || (select.options[0] ? select.options[0].value : null);
+        if(currentDesign) loadAdminImage();
     }
 }
 
@@ -162,24 +164,27 @@ function populateAdminImageSelect() {
     });
     if (select.options.length > 0) {
       currentDesign = select.options[0].value;
+    } else {
+      currentDesign = null; // No designs for this theme
     }
 }
 
 async function loadAdminImage() {
     if (!mainCanvas || !currentDesign) {
-        console.error("Admin canvas or current design not set for loadAdminImage.");
+        console.error("Admin canvas or current design not set for loadAdminImage. Current Design:", currentDesign);
+        // Optionally clear canvas or show a "no design selected" message
+        if (mainCanvas) {
+            const context = mainCanvas.getContext('2d');
+            context.clearRect(0,0,mainCanvas.width, mainCanvas.height);
+            context.fillText("Please select a design.", 10, 50);
+        }
+        updateAdminPanelWithCurrentDesignInfo(); // Update panel even if no image
         return;
     }
     const context = mainCanvas.getContext('2d');
     const img = new Image();
 
-    // *** MODIFIED PATH LOGIC FOR ADMIN PAGE ***
-    var basePath = '';
-    if (currentEidTheme === 'fitr') {
-        basePath = 'Eidfitr/';
-    } else if (currentEidTheme === 'adha') {
-        basePath = 'Eidadha/';
-    }
+    var basePath = getImageBasePath(currentEidTheme);
     img.src = basePath + currentDesign;
 
     img.onload = function() {
@@ -201,20 +206,27 @@ async function loadAdminImage() {
         }
         updateAdminPanelWithCurrentDesignInfo();
     };
+    // Display an error message on the canvas if image fails to load
     img.onerror = function() {
         console.error("Failed to load admin image: " + img.src);
         if (context) {
             context.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
             context.fillStyle = "red";
             context.font = "16px Arial";
-            context.fillText("Error: Image not found.", 10, 50);
+            context.fillText(`Error: Image "${currentDesign}" not found at ${img.src}.`, 10, 50);
         }
         updateAdminPanelWithCurrentDesignInfo();
     };
 }
 
-
 // --- Helper Functions (Shared) ---
+function getImageBasePath(theme) {
+    if (theme === 'fitr') return 'Eidfitr/';
+    if (theme === 'adha') return 'Eidadha/';
+    console.warn(`getImageBasePath: Unknown theme provided - ${theme}. Defaulting to empty path.`);
+    return '';
+}
+
 function formatFontOption(font) {
   if (!font.id) { return font.text; }
   if (typeof $ === 'undefined') { return font.text; }
@@ -236,15 +248,9 @@ function updateSwiperDesigns() {
   if (!swiperWrapper) { return; }
   swiperWrapper.innerHTML = '';
 
-  // *** MODIFIED PATH LOGIC FOR SWIPER ***
-  var basePath = '';
-  if (currentEidTheme === 'fitr') {
-      basePath = 'Eidfitr/';
-  } else if (currentEidTheme === 'adha') {
-      basePath = 'Eidadha/';
-  }
+  var basePath = getImageBasePath(currentEidTheme);
   var designs = [];
-  // The swiper on index.html shows Eid1-9 for both themes.
+  // Swiper on index.html displays Eid1-9 for both themes by default
   for (let i = 1; i <= 9; i++) { designs.push(`Eid${i}.jpeg`); }
 
   designs.forEach(function(designName, index) {
@@ -253,7 +259,7 @@ function updateSwiperDesigns() {
     var thumbnailDiv = document.createElement('div');
     thumbnailDiv.classList.add('thumbnail');
     var imgElement = document.createElement('img');
-    imgElement.src = basePath + designName; // Apply new base path
+    imgElement.src = basePath + designName;
     imgElement.alt = `Design ${index + 1}`;
     imgElement.dataset.src = designName;
     imgElement.classList.add('img-fluid');
@@ -302,7 +308,7 @@ function updateSwiperDesigns() {
 
 // --- Admin Mode Functionality (Shared logic for handling canvas clicks and generating JSON) ---
 function setupAdminCanvasListener(shouldListen, canvasId) {
-  const targetCanvas = document.getElementById(canvasId);
+  const targetCanvas = document.getElementById(canvasId); // canvasId is 'adminCanvas'
   if (targetCanvas) {
     if (shouldListen) { targetCanvas.addEventListener('click', handleAdminCanvasClick); }
     else { targetCanvas.removeEventListener('click', handleAdminCanvasClick); }
@@ -312,6 +318,7 @@ function setupAdminCanvasListener(shouldListen, canvasId) {
 }
 
 function handleAdminCanvasClick(event) {
+  // This function is only effectively called for adminCanvas due to setupAdminCanvasListener calls.
   if (!mainCanvas || !currentImageOriginalWidth || !currentImageOriginalHeight) return;
 
   let clickX = event.offsetX;
@@ -331,7 +338,7 @@ function updateAdminPanelWithCurrentDesignInfo() {
     const nameEl = document.getElementById('adminEditingImageName');
     const filenameEl = document.getElementById('jsonConfigFilename');
 
-    if (nameEl) nameEl.textContent = (currentEidTheme === 'adha' ? 'Eidadha/' : (currentEidTheme === 'fitr' ? 'Eidfitr/' : '')) + currentDesign;
+    if (nameEl) nameEl.textContent = getImageBasePath(currentEidTheme) + currentDesign;
     if (filenameEl) filenameEl.textContent = "text_configs.json";
 
     let settingsToDisplay = { fontSize: 30, x: 50, y: 50, defaultColor: '#000000' };
@@ -411,11 +418,12 @@ function setTextSettings(designName, scaleFactor, userSelectedFontColor, fontNam
 
 // --- Main Page Canvas Drawing (index.html) ---
 async function showImg() {
-  const canvasForUserPage = document.getElementById('myCanvas');
-  if (!canvasForUserPage) { return; }
-  if (mainCanvas !== canvasForUserPage && canvasForUserPage) mainCanvas = canvasForUserPage;
+  if (!mainCanvas || mainCanvas.id !== 'myCanvas') {
+    // console.log('showImg: Not on index.html or mainCanvas is not myCanvas.');
+    return;
+  }
 
-  const context = canvasForUserPage.getContext("2d");
+  const context = mainCanvas.getContext("2d");
   const textElement = document.getElementById("custom-text");
   const text = textElement ? textElement.value : '';
   const fontColorInput = document.getElementById("font-color");
@@ -424,13 +432,7 @@ async function showImg() {
   const fontFamily = fontFamilySelect ? fontFamilySelect.value : '';
 
   const img = new Image();
-  // *** MODIFIED PATH LOGIC FOR USER PAGE IMAGES ***
-  var basePath = '';
-  if (currentEidTheme === 'fitr') {
-      basePath = 'Eidfitr/';
-  } else if (currentEidTheme === 'adha') {
-      basePath = 'Eidadha/';
-  }
+  var basePath = getImageBasePath(currentEidTheme);
   const finalImageSrc = basePath + currentDesign;
   img.src = finalImageSrc;
 
@@ -442,17 +444,17 @@ async function showImg() {
     const isMobile = isMobileDevice();
 
     if (isMobile) {
-        canvasForUserPage.width = 390;
-        canvasForUserPage.height = 390;
+        mainCanvas.width = 390;
+        mainCanvas.height = 390;
     } else {
-        canvasForUserPage.width = img.width;
-        canvasForUserPage.height = img.height;
+        mainCanvas.width = img.width;
+        mainCanvas.height = img.height;
     }
 
-    let displayScaleFactor = canvasForUserPage.width / img.width;
+    let displayScaleFactor = mainCanvas.width / img.width;
 
-    context.clearRect(0, 0, canvasForUserPage.width, canvasForUserPage.height);
-    context.drawImage(img, 0, 0, canvasForUserPage.width, canvasForUserPage.height);
+    context.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+    context.drawImage(img, 0, 0, mainCanvas.width, mainCanvas.height);
 
     var designSettings = setTextSettings(currentDesign, displayScaleFactor, fontColor, fontFamily);
 
@@ -461,14 +463,14 @@ async function showImg() {
     context.fillText(text, designSettings.x, designSettings.y);
 
     if (isMobile) {
-        canvasForUserPage.style.width = deviceWidth + 'px';
-        canvasForUserPage.style.height = deviceWidth + 'px';
+        mainCanvas.style.width = deviceWidth + 'px';
+        mainCanvas.style.height = deviceWidth + 'px';
     }
   };
    img.onerror = function() {
     console.error("Failed to load image on user page: " + finalImageSrc);
     if (context) {
-        context.clearRect(0, 0, canvasForUserPage.width, canvasForUserPage.height);
+        context.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
         context.fillStyle = "red";
         context.font = "16px Arial";
         context.fillText("Error: Image not found.", 10, 50);
@@ -478,11 +480,12 @@ async function showImg() {
 
 // --- Save Image Functionality (index.html) ---
 async function saveImg() {
-  const canvasForUserPage = document.getElementById('myCanvas');
-  if (!canvasForUserPage) { return; }
-  if (mainCanvas !== canvasForUserPage && canvasForUserPage) mainCanvas = canvasForUserPage;
+  if (!mainCanvas || mainCanvas.id !== 'myCanvas') {
+    // console.log('saveImg: Not on index.html or mainCanvas is not myCanvas.');
+    return;
+  }
 
-  const context = canvasForUserPage.getContext("2d");
+  const context = mainCanvas.getContext("2d");
   const textElement = document.getElementById("custom-text");
   const text = textElement ? textElement.value : '';
   const fontColorInput = document.getElementById("font-color");
@@ -491,19 +494,13 @@ async function saveImg() {
   const fontFamily = fontFamilySelect ? fontFamilySelect.value : '';
 
   const img = new Image();
-  // *** MODIFIED PATH LOGIC FOR SAVING IMAGE ***
-  var basePath = '';
-  if (currentEidTheme === 'fitr') {
-      basePath = 'Eidfitr/';
-  } else if (currentEidTheme === 'adha') {
-      basePath = 'Eidadha/';
-  }
+  var basePath = getImageBasePath(currentEidTheme);
   const finalImageSrc = basePath + currentDesign;
   img.src = finalImageSrc;
 
   img.onload = function () {
-    canvasForUserPage.width = img.width;
-    canvasForUserPage.height = img.height;
+    mainCanvas.width = img.width; // Use original image dimensions for saving
+    mainCanvas.height = img.height;
     context.clearRect(0, 0, img.width, img.height);
     context.drawImage(img, 0, 0, img.width, img.height);
 
@@ -512,12 +509,12 @@ async function saveImg() {
     context.font = 'bold ' + designSettings.fontSize + ' ' + designSettings.fontFamily;
     context.fillText(capitalizeFirstLetter(text), designSettings.x, designSettings.y);
 
-    var image = canvasForUserPage.toDataURL("image/jpeg", 1.0).replace("image/jpeg", "image/octet-stream");
+    var image = mainCanvas.toDataURL("image/jpeg", 1.0).replace("image/jpeg", "image/octet-stream");
     var link = document.createElement('a');
     link.download = "Eid_Mubarak.jpg";
     link.href = image;
     link.click();
-    showImg();
+    showImg(); // Redraw for display after saving (might resize canvas)
   };
    img.onerror = function() {
     console.error("Failed to load image for saving: " + finalImageSrc);
