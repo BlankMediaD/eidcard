@@ -1,0 +1,150 @@
+{
+  "fitr": {
+    "Eid1.jpeg": {
+      "fontSize": 40,
+      "x": 470,
+      "y": 1025,
+      "defaultColor": "#000"
+    },
+    "Eid2.jpeg": {
+      "fontSize": 40,
+      "x": 466,
+      "y": 1025,
+      "defaultColor": "#000"
+    },
+    "Eid3.jpeg": {
+      "fontSize": 40,
+      "x": 672,
+      "y": 980,
+      "defaultColor": "#fff"
+    },
+    "Eid4.jpeg": {
+      "fontSize": 40,
+      "x": 560,
+      "y": 1020,
+      "defaultColor": "#ab7f33"
+    },
+    "Eid5.jpeg": {
+      "fontSize": 40,
+      "x": 698,
+      "y": 975,
+      "defaultColor": "#418732"
+    },
+    "Eid6.jpeg": {
+      "fontSize": 40,
+      "x": 710,
+      "y": 980,
+      "defaultColor": "#000"
+    },
+    "Eid7.jpeg": {
+      "fontSize": 40,
+      "x": 710,
+      "y": 980,
+      "defaultColor": "#fff"
+    },
+    "Eid8.jpeg": {
+      "fontSize": 40,
+      "x": 720,
+      "y": 980,
+      "defaultColor": "#000"
+    },
+    "Eid9.jpeg": {
+      "fontSize": 40,
+      "x": 720,
+      "y": 980,
+      "defaultColor": "#fff"
+    },
+    "Eid10.jpeg": {
+      "fontSize": 40,
+      "x": 730,
+      "y": 1000,
+      "defaultColor": "#fffffe"
+    },
+    "Eid11.jpeg": {
+      "fontSize": 40,
+      "x": 308,
+      "y": 882,
+      "defaultColor": "#fffffe"
+    },
+    "Eid12.jpeg": {
+      "fontSize": 40,
+      "x": 650,
+      "y": 848,
+      "defaultColor": "#fffffe"
+    },
+    "Eid13.jpeg": {
+      "fontSize": 40,
+      "x": 562,
+      "y": 1032,
+      "defaultColor": "#fffffe"
+    },
+    "Eid14.jpeg": {
+      "fontSize": 40,
+      "x": 644,
+      "y": 986,
+      "defaultColor": "#fffffe"
+    },
+    "Eid15.jpeg": {
+      "fontSize": 40,
+      "x": 656,
+      "y": 1038,
+      "defaultColor": "#efcb75"
+    }
+  },
+  "adha": {
+    "Eid1.jpeg": {
+      "fontSize": 40,
+      "x": 470,
+      "y": 1025,
+      "defaultColor": "#000"
+    },
+    "Eid2.jpeg": {
+      "fontSize": 40,
+      "x": 466,
+      "y": 1025,
+      "defaultColor": "#000"
+    },
+    "Eid3.jpeg": {
+      "fontSize": 40,
+      "x": 672,
+      "y": 980,
+      "defaultColor": "#fff"
+    },
+    "Eid4.jpeg": {
+      "fontSize": 40,
+      "x": 560,
+      "y": 1020,
+      "defaultColor": "#ab7f33"
+    },
+    "Eid5.jpeg": {
+      "fontSize": 40,
+      "x": 698,
+      "y": 975,
+      "defaultColor": "#418732"
+    },
+    "Eid6.jpeg": {
+      "fontSize": 40,
+      "x": 710,
+      "y": 980,
+      "defaultColor": "#000"
+    },
+    "Eid7.jpeg": {
+      "fontSize": 40,
+      "x": 710,
+      "y": 980,
+      "defaultColor": "#fff"
+    },
+    "Eid8.jpeg": {
+      "fontSize": 40,
+      "x": 720,
+      "y": 980,
+      "defaultColor": "#000"
+    },
+    "Eid9.jpeg": {
+      "fontSize": 40,
+      "x": 720,
+      "y": 980,
+      "defaultColor": "#fff"
+    }
+  }
+}

@@ -162,6 +162,7 @@ body {
     height: auto;
 }
 
+/* Removed #adminControlsPanel and #adminModeToggle.active-admin styles as elements are removed */
   
 </style>
 </head>
@@ -172,6 +173,7 @@ body {
         </a>
         <h3 class="mb-0">Jamia Mohammadia Kokan Mhasla | Eid Greeting Card</h3>
         <a href="https://kewa.education" class="btn btn-primary mt-2">Visit Website</a>
+         <a href="admin.html" class="btn btn-secondary mt-2">Admin Panel</a> <!-- Added link to Admin Panel -->
     </header>
     <div class="container">
     <div class="doc">
@@ -238,6 +240,7 @@ body {
   <div class="swiper-pagination"></div>
 </div>
 
+<!-- Old Admin UI Toggle Button and Panel REMOVED -->
      
 <div class="container">
   <div class="row">
@@ -285,278 +288,6 @@ body {
 <footer class="container text-center py-3">
     <p>&copy; 2024 Kewa Education. All rights reserved.</p>
 </footer>
-
-<script>
-
-$(document).ready(function() {
-  $('.font-family-select').select2({
-    templateResult: formatFontOption,
-    templateSelection: formatFontOption
-  });
-});
-
-function formatFontOption(font) {
-  if (!font.id) {
-    return font.text;
-  }
-  var $font = $('<span class="font-option" style="font-family:' + font.element.value + ';">' + font.text + '</span>');
-  return $font;
-}
-var currentDesign = "Eid1.jpeg";
-document.addEventListener("DOMContentLoaded", function () {
-  var $swiperSelector = $('.swiper-container');
-
-  $swiperSelector.each(function(index) {
-    var $this = $(this);
-    $this.addClass('swiper-slider-' + index);
-    
-    var loop = $this.data('loop') ? $this.data('loop') : false;
-    var slidesPerView = $this.data('slides-per-view') ? $this.data('slides-per-view') : 2;
-    var spaceBetween = $this.data('space-between') ? $this.data('space-between') : 10;
-
-    var swiper = new Swiper('.swiper-slider-' + index, {
-      slidesPerView: slidesPerView,
-      spaceBetween: spaceBetween,
-      loop: loop,
-      navigation: {
-        nextEl: ".swiper-button-next",
-        prevEl: ".swiper-button-prev",
-      },
-      pagination: {
-        el: ".swiper-pagination",
-        clickable: true,
-      },
-    });
-  });
-
-  var thumbnails = document.querySelectorAll(".thumbnail img");
-  thumbnails.forEach(function (thumbnail) {
-    thumbnail.addEventListener("click", function (e) {
-      thumbnails.forEach(function (thumb) {
-        thumb.classList.remove("selected");
-      });
-      e.target.classList.add("selected");
-      currentDesign = e.target.dataset.src;
-      showImg();
-    });
-  });
-});
-
-function isMobileDevice() {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-}
-function setTextSettings(design, scaleFactor, fontColor, fontName) {
-  var settings = {
-    'Eid1.jpeg': {
-      fontSize: 40,
-      x: 470,
-      y: 1025,
-      color: '#000'
-    },
-    'Eid2.jpeg': {
-      fontSize: 40,
-      x: 466,
-      y: 1025,
-      color: '#000' 
-    },
-    'Eid3.jpeg': {
-      fontSize: 40,
-      x: 672,
-      y: 980,
-      color: '#fff' 
-    },
-    'Eid4.jpeg': {
-      fontSize: 40,
-      x: 560,
-      y: 1020,
-      color: '#ab7f33' 
-    },
-    'Eid5.jpeg': {
-      fontSize: 40,
-      x: 698,
-      y: 975,
-      color: '#418732' 
-    },
-    'Eid6.jpeg': {
-      fontSize: 40,
-      x: 710,
-      y: 980,
-      color: '#000' 
-    },
-    'Eid7.jpeg': { 
-      fontSize: 40,
-      x: 710,
-      y: 980,
-      color: '#fff'
-    },
-    'Eid8.jpeg': { 
-      fontSize: 40,
-      x: 720,
-      y: 980,
-      color: '#000'
-    },
-    'Eid9.jpeg': { 
-      fontSize: 40,
-      x: 720,
-      y: 980,
-      color: '#fff'
-    },
-    'Eid10.jpeg': { 
-      fontSize: 40,
-      x: 730,
-      y: 1000,
-      color: '#fffffe'
-    },
-    'Eid11.jpeg': { 
-      fontSize: 40,
-      x: 308,
-      y: 882,
-      color: '#fffffe'
-    },
-    'Eid12.jpeg': { 
-      fontSize: 40,
-      x: 650,
-      y: 848,
-      color: '#fffffe'
-    },
-    'Eid13.jpeg': { 
-      fontSize: 40,
-      x: 562,
-      y: 1032,
-      color: '#fffffe'
-    },
-    'Eid14.jpeg': { 
-      fontSize: 40,
-      x: 644,
-      y: 986,
-      color: '#fffffe'
-    },
-    'Eid15.jpeg': { 
-      fontSize: 40,
-      x: 656,
-      y: 1038,
-      color: '#efcb75'
-    }
-  };
-var designSettings = settings[design];
-  // If the form color matches the default form color, use the color defined in JS
-  if (fontColor === '#000000') {
-    fontColor = designSettings.color;
-  }
-   return {
-    color: fontColor,
-    fontSize: (designSettings.fontSize * scaleFactor) + 'px',
-    x: (designSettings.x * scaleFactor),
-    y: (designSettings.y * scaleFactor),
-    fontFamily: fontName
-  };
-}
-function showImg() {
-  var canvas = document.getElementById("myCanvas");
-  var context = canvas.getContext("2d");
-  var textElement = document.getElementById("custom-text");
-  var text = textElement ? textElement.value : '';
-  var fontColorInput = document.getElementById("font-color");
-  var fontColor = fontColorInput ? fontColorInput.value : '';
-  var fontFamilySelect = document.getElementById("font-family");
-  var fontFamily = fontFamilySelect ? fontFamilySelect.value : '';
-
-  var img = new Image();
-  img.src = currentDesign;
-
-img.onload = function() {
-    var deviceWidth = window.innerWidth; // or another way to determine device width
-    var isMobile = isMobileDevice();
-
-    if (isMobile) {
-        canvas.width = 390;
-        canvas.height = 390;
-    } else {
-        // use original image size for the canvas
-        canvas.width = img.width;
-        canvas.height = img.height;
-    }
-
-    scaleFactor = canvas.width / img.width;
-
-    // draw the image on the canvas
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-    // get the text settings based on the current image size
-    var designSettings = setTextSettings(currentDesign, scaleFactor, fontColor, fontFamily);
-
-    // draw the text on the image
-    context.fillStyle = designSettings.color;
-    context.font = 'bold ' + designSettings.fontSize + ' ' + designSettings.fontFamily;
-    context.fillText(text, designSettings.x, designSettings.y);
-
-    // If on mobile, scale down the canvas to fit the mobile screen after drawing
-    if (isMobile) {
-        canvas.style.width = deviceWidth + 'px';
-        canvas.style.height = deviceWidth + 'px';
-    }
-  };
-
-}
-function capitalizeFirstLetter(string) {
-  return string.charAt(0).toUpperCase() + string.slice(1);
-}
-
-function saveImg() {
-  var canvas = document.getElementById("myCanvas");
-  var context = canvas.getContext("2d");
-  var originalWidth = canvas.width;
-  var originalHeight = canvas.height;
-  var textElement = document.getElementById("custom-text");
-  var text = textElement ? textElement.value : '';
-var fontColorInput = document.getElementById("font-color");
-  var fontColor = fontColorInput ? fontColorInput.value : '';
-
-  var fontFamilySelect = document.getElementById("font-family");
-  var fontFamily = fontFamilySelect ? fontFamilySelect.value : '';
-
-  var img = new Image();
-  img.src = currentDesign;
-
-  img.onload = function () {
-    canvas.width = img.width;
-    canvas.height = img.height;
-    context.clearRect(0, 0, img.width, img.height);
-    context.drawImage(img, 0, 0, img.width, img.height);
-
-    var designSettings = setTextSettings(currentDesign, 1, fontColor, fontFamily);
-    context.fillStyle = designSettings.color;
-  context.font = 'bold ' + designSettings.fontSize + ' ' + designSettings.fontFamily;
-    context.fillText(capitalizeFirstLetter(text), designSettings.x, designSettings.y);
-
-    var image = canvas.toDataURL("image/jpeg", 1.0).replace("image/jpeg", "image/octet-stream");
-    var link = document.createElement('a');
-    link.download = "Eid_Mubarak.jpg";
-    link.href = image;
-    link.click();
-
-    // Restore the canvas to its original size and redraw the image
-    showImg();
-  };
-}
-document.addEventListener("DOMContentLoaded", function () {
-  var thumbnails = document.querySelectorAll(".thumbnail img");
-  thumbnails.forEach(function (thumbnail) {
-    thumbnail.addEventListener("click", function (e) {
-      thumbnails.forEach(function (thumb) {
-        thumb.classList.remove("selected");
-      });
-      e.target.classList.add("selected");
-      currentDesign = e.target.dataset.src;
-      showImg();
-    });
-  });
-
-  // Call showImg() once to display the initial image
-  showImg();
-
-});
-</script>
+<script src="app_logic.js" defer></script>
 </body>
 </html>
