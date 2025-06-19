@@ -93,7 +93,6 @@ function initializeIndexPage() {
     updateSwiperDesigns();
     showImg();
   });
-  // Old admin UI elements and their listeners from index.html are now removed.
 }
 
 // --- Initialization for admin.html ---
@@ -107,6 +106,10 @@ function initializeAdminPage() {
         if (adminFontFamilySelect) { $(adminFontFamilySelect).select2(); }
     } else { console.warn("jQuery or Select2 not available for adminFontFamily select on admin.html."); }
 
+    // Set initial theme for admin page based on its select element's default
+    if (adminEidThemeSelect) {
+        currentEidTheme = adminEidThemeSelect.value;
+    }
     populateAdminImageSelect();
 
     if (adminEidThemeSelect) {
@@ -137,7 +140,7 @@ function initializeAdminPage() {
         adminGenerateJsonBtn.addEventListener('click', generateAdminJsonConfig);
     }
 
-    setupAdminCanvasListener(true, 'adminCanvas'); // Always listen on admin page
+    setupAdminCanvasListener(true, 'adminCanvas');
 
     if (adminImageSelect.options.length > 0) {
         currentDesign = adminImageSelect.value;
@@ -169,7 +172,14 @@ async function loadAdminImage() {
     }
     const context = mainCanvas.getContext('2d');
     const img = new Image();
-    const basePath = (currentEidTheme === 'adha') ? 'Eidadha/' : '';
+
+    // *** MODIFIED PATH LOGIC FOR ADMIN PAGE ***
+    var basePath = '';
+    if (currentEidTheme === 'fitr') {
+        basePath = 'Eidfitr/';
+    } else if (currentEidTheme === 'adha') {
+        basePath = 'Eidadha/';
+    }
     img.src = basePath + currentDesign;
 
     img.onload = function() {
@@ -187,7 +197,7 @@ async function loadAdminImage() {
         if (settings) {
             context.fillStyle = settings.color;
             context.font = `bold ${settings.fontSize} ${settings.fontFamily}`;
-            context.fillText("Your Name", settings.x, settings.y); // Sample text for preview
+            context.fillText("Your Name", settings.x, settings.y);
         }
         updateAdminPanelWithCurrentDesignInfo();
     };
@@ -226,8 +236,15 @@ function updateSwiperDesigns() {
   if (!swiperWrapper) { return; }
   swiperWrapper.innerHTML = '';
 
-  var basePath = (currentEidTheme === 'adha') ? 'Eidadha/' : '';
+  // *** MODIFIED PATH LOGIC FOR SWIPER ***
+  var basePath = '';
+  if (currentEidTheme === 'fitr') {
+      basePath = 'Eidfitr/';
+  } else if (currentEidTheme === 'adha') {
+      basePath = 'Eidadha/';
+  }
   var designs = [];
+  // The swiper on index.html shows Eid1-9 for both themes.
   for (let i = 1; i <= 9; i++) { designs.push(`Eid${i}.jpeg`); }
 
   designs.forEach(function(designName, index) {
@@ -235,8 +252,8 @@ function updateSwiperDesigns() {
     slide.classList.add('swiper-slide');
     var thumbnailDiv = document.createElement('div');
     thumbnailDiv.classList.add('thumbnail');
-    var imgElement = document.createElement('img'); // Renamed to avoid conflict with Image constructor
-    imgElement.src = basePath + designName;
+    var imgElement = document.createElement('img');
+    imgElement.src = basePath + designName; // Apply new base path
     imgElement.alt = `Design ${index + 1}`;
     imgElement.dataset.src = designName;
     imgElement.classList.add('img-fluid');
@@ -263,7 +280,7 @@ function updateSwiperDesigns() {
           navigation: { nextEl: ".swiper-button-next", prevEl: ".swiper-button-prev" },
           pagination: { el: ".swiper-pagination", clickable: true },
         });
-  } else { /* console.error("Swiper container not found for index.html."); */ }
+  }
 
   var thumbnails = document.querySelectorAll(".swiper-slide .thumbnail img");
   thumbnails.forEach(function (thumbnail) {
@@ -284,9 +301,6 @@ function updateSwiperDesigns() {
 }
 
 // --- Admin Mode Functionality (Shared logic for handling canvas clicks and generating JSON) ---
-// Note: toggleAdminMode for index.html's panel is removed as the panel itself is removed from index.html.
-// isAdminModeActive global is also effectively unused for index.html.
-
 function setupAdminCanvasListener(shouldListen, canvasId) {
   const targetCanvas = document.getElementById(canvasId);
   if (targetCanvas) {
@@ -299,8 +313,6 @@ function setupAdminCanvasListener(shouldListen, canvasId) {
 
 function handleAdminCanvasClick(event) {
   if (!mainCanvas || !currentImageOriginalWidth || !currentImageOriginalHeight) return;
-  // On admin.html, clicks always try to update coordinates.
-  // On index.html, this function is no longer called as setupAdminCanvasListener is not invoked for 'myCanvas'.
 
   let clickX = event.offsetX;
   let clickY = event.offsetY;
@@ -317,22 +329,20 @@ function updateAdminPanelWithCurrentDesignInfo() {
     if (!currentDesign) return;
 
     const nameEl = document.getElementById('adminEditingImageName');
-    const filenameEl = document.getElementById('jsonConfigFilename'); // This ID is on admin.html
+    const filenameEl = document.getElementById('jsonConfigFilename');
 
-    if (nameEl) nameEl.textContent = (currentEidTheme === 'adha' ? 'Eidadha/' : '') + currentDesign;
-    if (filenameEl) filenameEl.textContent = "text_configs.json"; // Always this file
+    if (nameEl) nameEl.textContent = (currentEidTheme === 'adha' ? 'Eidadha/' : (currentEidTheme === 'fitr' ? 'Eidfitr/' : '')) + currentDesign;
+    if (filenameEl) filenameEl.textContent = "text_configs.json";
 
     let settingsToDisplay = { fontSize: 30, x: 50, y: 50, defaultColor: '#000000' };
 
     if (allTextConfigs && allTextConfigs[currentEidTheme]) {
         let designSpecificConfig = allTextConfigs[currentEidTheme][currentDesign];
         if (currentEidTheme === 'adha' && !designSpecificConfig && currentDesign.match(/Eid(1[0-5])\.jpeg/)) {
-            // console.warn(`AdminPanel: Config for Adha design ${currentDesign} not in adha theme, trying fitr theme.`);
             designSpecificConfig = allTextConfigs.fitr ? allTextConfigs.fitr[currentDesign] : null;
         }
         if (designSpecificConfig) { settingsToDisplay = designSpecificConfig; }
-        else { /* console.warn(`AdminPanel: No config for ${currentDesign} in ${currentEidTheme}. Using defaults.`); */ }
-    } else { /* console.warn(`AdminPanel: allTextConfigs is null or theme ${currentEidTheme} not found. Using defaults.`); */ }
+    }
 
     const xInput = document.getElementById('adminCoordX');
     const yInput = document.getElementById('adminCoordY');
@@ -345,7 +355,7 @@ function updateAdminPanelWithCurrentDesignInfo() {
     if (fontColorInput) fontColorInput.value = settingsToDisplay.defaultColor || '#000000';
 }
 
-function generateAdminJsonConfig() { // Called by admin.html's button
+function generateAdminJsonConfig() {
   const fontSizeEl = document.getElementById('adminFontSize');
   const coordXEl = document.getElementById('adminCoordX');
   const coordYEl = document.getElementById('adminCoordY');
@@ -403,7 +413,7 @@ function setTextSettings(designName, scaleFactor, userSelectedFontColor, fontNam
 async function showImg() {
   const canvasForUserPage = document.getElementById('myCanvas');
   if (!canvasForUserPage) { return; }
-  if (mainCanvas !== canvasForUserPage) mainCanvas = canvasForUserPage; // Ensure mainCanvas is set for index.html context if needed by shared fns
+  if (mainCanvas !== canvasForUserPage && canvasForUserPage) mainCanvas = canvasForUserPage;
 
   const context = canvasForUserPage.getContext("2d");
   const textElement = document.getElementById("custom-text");
@@ -414,7 +424,13 @@ async function showImg() {
   const fontFamily = fontFamilySelect ? fontFamilySelect.value : '';
 
   const img = new Image();
-  const basePath = (currentEidTheme === 'adha') ? 'Eidadha/' : '';
+  // *** MODIFIED PATH LOGIC FOR USER PAGE IMAGES ***
+  var basePath = '';
+  if (currentEidTheme === 'fitr') {
+      basePath = 'Eidfitr/';
+  } else if (currentEidTheme === 'adha') {
+      basePath = 'Eidadha/';
+  }
   const finalImageSrc = basePath + currentDesign;
   img.src = finalImageSrc;
 
@@ -448,7 +464,6 @@ async function showImg() {
         canvasForUserPage.style.width = deviceWidth + 'px';
         canvasForUserPage.style.height = deviceWidth + 'px';
     }
-    // No need to call updateAdminPanelWithCurrentDesignInfo from here for index.html as its admin panel is gone.
   };
    img.onerror = function() {
     console.error("Failed to load image on user page: " + finalImageSrc);
@@ -465,6 +480,7 @@ async function showImg() {
 async function saveImg() {
   const canvasForUserPage = document.getElementById('myCanvas');
   if (!canvasForUserPage) { return; }
+  if (mainCanvas !== canvasForUserPage && canvasForUserPage) mainCanvas = canvasForUserPage;
 
   const context = canvasForUserPage.getContext("2d");
   const textElement = document.getElementById("custom-text");
@@ -475,7 +491,13 @@ async function saveImg() {
   const fontFamily = fontFamilySelect ? fontFamilySelect.value : '';
 
   const img = new Image();
-  const basePath = (currentEidTheme === 'adha') ? 'Eidadha/' : '';
+  // *** MODIFIED PATH LOGIC FOR SAVING IMAGE ***
+  var basePath = '';
+  if (currentEidTheme === 'fitr') {
+      basePath = 'Eidfitr/';
+  } else if (currentEidTheme === 'adha') {
+      basePath = 'Eidadha/';
+  }
   const finalImageSrc = basePath + currentDesign;
   img.src = finalImageSrc;
 
