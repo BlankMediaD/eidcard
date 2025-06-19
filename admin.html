@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eid Card Admin - Text Configuration</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <!-- <link rel="stylesheet" href="css/admin_custom.css"> --> <!-- Optional: create if needed -->
+    <style>
+        body { padding-top: 20px; padding-bottom: 20px; }
+        canvas { display: block; border: 2px solid #888; max-width: 100%; height: auto; margin-top: 10px; cursor: crosshair; }
+        .admin-controls-container { margin-top: 20px; padding: 20px; border: 1px solid #dee2e6; border-radius: .25rem; background-color: #f8f9fa; }
+        .form-group label { font-weight: bold; }
+        #generatedJsonOutput { white-space: pre; font-family: monospace; background-color: #e9ecef; }
+        header, footer { text-align: center; }
+        /* Add more specific styles to css/admin_custom.css if this grows */
+    </style>
+</head>
+<body>
+    <header class="container py-3">
+        <h1>Eid Card Admin Panel</h1>
+        <p class="lead">Configure text placement for Eid card designs.</p>
+        <a href="index.html" class="btn btn-info mt-2">Back to Card Generator</a>
+    </header>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-lg-7 col-md-12 mb-3">
+                <!-- Image Selection -->
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="adminEidThemeSelect">Select Eid Theme:</label>
+                        <select id="adminEidThemeSelect" class="form-control">
+                            <option value="fitr" selected>Eid ul Fitr</option>
+                            <option value="adha">Eid ul Adha</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="adminImageSelect">Select Image Design:</label>
+                        <select id="adminImageSelect" class="form-control">
+                            <!-- Options will be populated by JavaScript -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Canvas for Image Display and Interaction -->
+                <canvas id="adminCanvas" width="600" height="600"></canvas>
+            </div>
+
+            <div class="col-lg-5 col-md-12">
+                <!-- Admin Controls Panel -->
+                <div class="admin-controls-container">
+                    <h4>Text Configuration</h4>
+                    <p class="mb-2">Editing for: <strong id="adminEditingImageName">N/A</strong></p>
+                    <div class="form-group">
+                        <label for="adminCoordX">X Coordinate:</label>
+                        <input type="number" id="adminCoordX" class="form-control form-control-sm">
+                    </div>
+                    <div class="form-group">
+                        <label for="adminCoordY">Y Coordinate:</label>
+                        <input type="number" id="adminCoordY" class="form-control form-control-sm">
+                    </div>
+                    <div class="form-group">
+                        <label for="adminFontSize">Font Size:</label>
+                        <input type="number" id="adminFontSize" class="form-control form-control-sm">
+                    </div>
+                    <div class="form-group">
+                        <label for="adminFontColor">Default Font Color:</label>
+                        <input type="color" id="adminFontColor" class="form-control form-control-sm" value="#000000">
+                    </div>
+                    <div class="form-group">
+                        <label for="adminFontFamily">Font Family (Preview Only):</label>
+                        <select id="adminFontFamily" name="admin-font-family" class="form-control form-control-sm">
+                            <option value="Berkshire Swash">Berkshire Swash</option>
+                            <option value="Montserrat">Montserrat</option>
+                            <option value="Arial">Arial</option>
+                            <option value="Times New Roman">Times New Roman</option>
+                        </select>
+                    </div>
+                    <button id="adminGenerateJsonBtn" class="btn btn-primary btn-block">Generate JSON Config Snippet</button>
+                    <hr>
+                    <div class="form-group">
+                        <label for="generatedJsonOutput">Generated JSON Snippet:</label>
+                        <textarea id="generatedJsonOutput" class="form-control form-control-sm" rows="7" readonly></textarea>
+                    </div>
+                    <small class="form-text text-muted">
+                        <strong>Instructions:</strong> Copy the snippet above. Manually update the corresponding section within the
+                        <code><span id="jsonConfigFilename">text_configs.json</span></code> file (in the project's root directory).
+                        Ensure it's placed under the correct theme and image name.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="container py-3 mt-4">
+        <p>&copy; 2024 Kewa Education Admin</p>
+    </footer>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="app_logic.js" defer></script>
+</body>
+</html>
