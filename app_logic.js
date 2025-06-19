@@ -13,6 +13,7 @@ window.mySwiper = null;
 
 // --- Canvas Element References (context-dependent) ---
 var mainCanvas = null; // Used by index.html (#myCanvas) or admin.html (#adminCanvas)
+var currentAdminImageObject = null; // Holds the currently loaded image object for the admin canvas
 
 // --- Image lists for Admin Dropdown ---
 const FITR_IMAGE_NAMES = Array.from({length: 15}, (_, i) => `Eid${i + 1}.jpeg`);
@@ -20,14 +21,14 @@ const ADHA_IMAGE_NAMES = Array.from({length: 9}, (_, i) => `Eid${i + 1}.jpeg`);
 
 // --- DOMContentLoaded: Main Initialization ---
 document.addEventListener("DOMContentLoaded", async function () {
-  await loadAllTextConfigs(); // Load configs first, needed by both pages
+  await loadAllTextConfigs(); // Load configs first. This will also set currentEidTheme for index.html.
 
   // Page-specific initializations
-  if (document.getElementById('myCanvas') && document.querySelector('.swiper-container')) {
+  if (document.getElementById('myCanvas') && document.querySelector('.swiper-container')) { // Index page
     mainCanvas = document.getElementById('myCanvas');
-    console.log("Initializing for index.html");
+    console.log("Initializing for index.html with theme:", currentEidTheme);
     initializeIndexPage();
-  } else if (document.getElementById('adminCanvas')) {
+  } else if (document.getElementById('adminCanvas')) { // Admin page
     mainCanvas = document.getElementById('adminCanvas');
     console.log("Initializing for admin.html");
     initializeAdminPage();
@@ -39,21 +40,77 @@ document.addEventListener("DOMContentLoaded", async function () {
 // --- Configuration Loading ---
 async function loadAllTextConfigs() {
     try {
-        const response = await fetch('text_configs.json');
+        const response = await fetch('api/get_config.php'); // Changed to PHP endpoint
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}, while fetching text_configs.json`);
+            // Try to get error message from PHP script if available
+            let errorData = null;
+            try {
+                errorData = await response.json();
+            } catch (e) { /* ignore if response is not json */ }
+
+            let errorMessage = `HTTP error! status: ${response.status}`;
+            if (errorData && errorData.error) {
+                errorMessage += ` - Server: ${errorData.error}`;
+            }
+            throw new Error(`${errorMessage}, while fetching config from api/get_config.php`);
         }
         allTextConfigs = await response.json();
-        console.log("Text configurations loaded successfully from text_configs.json.");
+
+        if (typeof allTextConfigs !== 'object' || allTextConfigs === null) {
+            console.warn("Config from api/get_config.php was not a valid object. Initializing with defaults.");
+            allTextConfigs = { defaultThemeForUser: 'fitr', fitr: {}, adha: {} };
+        }
+
+        if (!allTextConfigs.hasOwnProperty('defaultThemeForUser') ||
+            !['fitr', 'adha'].includes(allTextConfigs.defaultThemeForUser)) {
+            console.warn("defaultThemeForUser not found or invalid in config. Defaulting to 'fitr'.");
+            allTextConfigs.defaultThemeForUser = 'fitr';
+        }
+
+        // Set currentEidTheme for index.html based on loaded config.
+        // This needs to happen before initializeIndexPage is called.
+        // Check if we are on index.html by looking for unique elements of index.html and ensuring admin elements aren't present.
+        if (document.getElementById('myCanvas') && document.querySelector('.swiper-container') && !document.getElementById('adminCanvas')) {
+             currentEidTheme = allTextConfigs.defaultThemeForUser;
+             console.log("Global currentEidTheme set to:", currentEidTheme, "from config for index.html.");
+        }
+
+        console.log("Text configurations loaded successfully via get_config.php. Default theme for user:", allTextConfigs.defaultThemeForUser);
     } catch (error) {
-        console.error("Failed to load text_configs.json:", error);
-        // Ensures downstream functions don't try to access keys on null if loading fails.
-        allTextConfigs = { fitr: {}, adha: {} };
+        console.error("Failed to load or parse configuration from api/get_config.php:", error);
+        allTextConfigs = { defaultThemeForUser: 'fitr', fitr: {}, adha: {} }; // Fallback config
+
+        // If loading fails, index.html will use the globally preset 'fitr' for currentEidTheme
+        // or whatever was its initial default if this logic also fails.
+        // Check if we are on index.html
+        if (document.getElementById('myCanvas') && document.querySelector('.swiper-container') && !document.getElementById('adminCanvas')) {
+            currentEidTheme = 'fitr'; // Explicitly fallback for index page if API/config error
+            console.warn("Falling back to default 'fitr' theme for index.html due to API/config error.");
+        }
     }
 }
 
 // --- Initialization for index.html ---
 function initializeIndexPage() {
+    // Update button states based on currentEidTheme (which might have been set by loadAllTextConfigs)
+    const fitrButton = document.getElementById('fitrBtn');
+    const adhaButton = document.getElementById('adhaBtn');
+    if (fitrButton && adhaButton) {
+        if (currentEidTheme === 'fitr') {
+            fitrButton.classList.add('btn-primary', 'active');
+            fitrButton.classList.remove('btn-secondary');
+            adhaButton.classList.add('btn-secondary');
+            adhaButton.classList.remove('btn-primary', 'active');
+        } else if (currentEidTheme === 'adha') {
+            adhaButton.classList.add('btn-primary', 'active');
+            adhaButton.classList.remove('btn-secondary');
+            fitrButton.classList.add('btn-secondary');
+            fitrButton.classList.remove('btn-primary', 'active');
+        }
+    } else {
+        console.warn("Theme buttons (fitrBtn/adhaBtn) not found on index.html for visual update.");
+    }
+
   if (typeof $ !== 'undefined' && typeof $.fn.select2 === 'function') {
     $('.font-family-select').select2({
         templateResult: formatFontOption,
@@ -99,7 +156,14 @@ function initializeAdminPage() {
     const adminEidThemeSelect = document.getElementById('adminEidThemeSelect');
     const adminImageSelect = document.getElementById('adminImageSelect');
     const adminFontFamilySelect = document.getElementById('adminFontFamily');
-    const adminGenerateJsonBtn = document.getElementById('adminGenerateJsonBtn');
+    // const adminGenerateJsonBtn = document.getElementById('adminGenerateJsonBtn'); // Button removed
+    const defaultUserThemeSelect = document.getElementById('defaultUserThemeSelect');
+    // const updateFullJsonBtn = document.getElementById('updateFullJsonBtn'); // Button removed
+    const saveFullConfigBtn = document.getElementById('saveFullConfigBtn'); // New save button
+    const adminCoordXInput = document.getElementById('adminCoordX');
+    const adminCoordYInput = document.getElementById('adminCoordY');
+    const adminFontSizeInput = document.getElementById('adminFontSize');
+    const adminFontColorInput = document.getElementById('adminFontColor');
 
     if (typeof $ !== 'undefined' && typeof $.fn.select2 === 'function') {
         if (adminFontFamilySelect) { $(adminFontFamilySelect).select2(); }
@@ -107,19 +171,27 @@ function initializeAdminPage() {
 
     if (adminEidThemeSelect) {
         currentEidTheme = adminEidThemeSelect.value; // Set initial theme for admin
-        // Handle theme selection change
         adminEidThemeSelect.addEventListener('change', function() {
             currentEidTheme = this.value;
             populateAdminImageSelect();
             if (adminImageSelect.options.length > 0) {
                 currentDesign = adminImageSelect.value;
                 loadAdminImage();
+            } else {
+                 // No designs for this theme, clear canvas and inputs
+                if(mainCanvas && mainCanvas.id === 'adminCanvas') {
+                    const context = mainCanvas.getContext('2d');
+                    context.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+                    currentAdminImageObject = null; // Clear stored image
+                    document.getElementById('adminEditingImageName').textContent = 'N/A';
+                }
+                updateAdminPanelWithCurrentDesignInfo(); // Clears or sets defaults for inputs
+                redrawAdminCanvasText(); // Attempt to draw (will likely show nothing or placeholder)
             }
         });
     }
-    populateAdminImageSelect(); // Initial population based on currentEidTheme
+    populateAdminImageSelect();
 
-    // Handle image design selection change
     if (adminImageSelect) {
         adminImageSelect.addEventListener('change', function() {
             currentDesign = this.value;
@@ -127,16 +199,29 @@ function initializeAdminPage() {
         });
     }
 
-    // Handle font family change for preview
-    if (adminFontFamilySelect) {
-        adminFontFamilySelect.addEventListener('change', function() {
-            if (currentDesign) loadAdminImage();
-        });
-    }
+    // Event listeners for live preview on admin canvas
+    if (adminCoordXInput) adminCoordXInput.addEventListener('input', redrawAdminCanvasText);
+    if (adminCoordYInput) adminCoordYInput.addEventListener('input', redrawAdminCanvasText);
+    if (adminFontSizeInput) adminFontSizeInput.addEventListener('input', redrawAdminCanvasText);
+    if (adminFontColorInput) adminFontColorInput.addEventListener('input', redrawAdminCanvasText);
+    if (adminFontFamilySelect) adminFontFamilySelect.addEventListener('change', redrawAdminCanvasText);
 
     // Setup "Generate JSON" button
-    if (adminGenerateJsonBtn) {
-        adminGenerateJsonBtn.addEventListener('click', generateAdminJsonConfig);
+    // Setup "Generate JSON" button - REMOVED
+    // if (adminGenerateJsonBtn) {
+    //     adminGenerateJsonBtn.addEventListener('click', generateAdminJsonConfig);
+    // }
+
+    if (defaultUserThemeSelect) {
+        defaultUserThemeSelect.value = allTextConfigs.defaultThemeForUser || 'fitr';
+    }
+
+    // if (updateFullJsonBtn) { // Button removed
+    //     updateFullJsonBtn.addEventListener('click', updateFullJsonOutput);
+    // }
+
+    if (saveFullConfigBtn) {
+        saveFullConfigBtn.addEventListener('click', saveFullConfiguration);
     }
 
     // Always listen for canvas clicks on admin page
@@ -190,33 +275,62 @@ async function loadAdminImage() {
     img.onload = function() {
         currentImageOriginalWidth = img.width;
         currentImageOriginalHeight = img.height;
+        currentAdminImageObject = img; // Store the loaded image object
+
         mainCanvas.width = img.width;
         mainCanvas.height = img.height;
-        context.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
-        context.drawImage(img, 0, 0, mainCanvas.width, mainCanvas.height);
 
-        const adminFontFamilySelect = document.getElementById('adminFontFamily');
-        const previewFont = adminFontFamilySelect ? adminFontFamilySelect.value : 'Arial';
-        const settings = setTextSettings(currentDesign, 1, '#000000', previewFont);
-
-        if (settings) {
-            context.fillStyle = settings.color;
-            context.font = `bold ${settings.fontSize} ${settings.fontFamily}`;
-            context.fillText("Your Name", settings.x, settings.y);
-        }
-        updateAdminPanelWithCurrentDesignInfo();
+        updateAdminPanelWithCurrentDesignInfo(); // Populate inputs first
+        redrawAdminCanvasText(); // Then draw text based on those inputs
     };
-    // Display an error message on the canvas if image fails to load
     img.onerror = function() {
         console.error("Failed to load admin image: " + img.src);
-        if (context) {
+        currentAdminImageObject = null; // Clear stored image on error
+        if (mainCanvas && mainCanvas.id === 'adminCanvas') {
+            const context = mainCanvas.getContext('2d');
             context.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
             context.fillStyle = "red";
             context.font = "16px Arial";
             context.fillText(`Error: Image "${currentDesign}" not found at ${img.src}.`, 10, 50);
         }
-        updateAdminPanelWithCurrentDesignInfo();
+        updateAdminPanelWithCurrentDesignInfo(); // Update panel (e.g. clear coords)
     };
+}
+
+function redrawAdminCanvasText() {
+    if (!mainCanvas || mainCanvas.id !== 'adminCanvas' || !currentAdminImageObject) {
+        // If no image is loaded (e.g., theme switched to one with no images, or image error)
+        // still try to clear and potentially draw placeholder text if inputs have values.
+        if (mainCanvas && mainCanvas.id === 'adminCanvas') {
+            const context = mainCanvas.getContext('2d');
+            context.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+            if (!currentAdminImageObject) { // Only show this if there's truly no image
+                 context.font = "16px Arial";
+                 context.fillStyle = "grey";
+                 context.fillText("No image loaded, or image error.", 10, 50);
+            }
+        }
+        // Do not proceed to draw text if there's no image.
+        // However, if an image IS loaded but this function is called due to input changes,
+        // it should proceed to draw over that image.
+        // The currentAdminImageObject check handles the "no image" case.
+        // For the case where an image *is* loaded, it will proceed below.
+         if (!currentAdminImageObject) return;
+    }
+
+    const context = mainCanvas.getContext('2d');
+    context.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+    context.drawImage(currentAdminImageObject, 0, 0, mainCanvas.width, mainCanvas.height);
+
+    const x = parseInt(document.getElementById('adminCoordX').value) || 0;
+    const y = parseInt(document.getElementById('adminCoordY').value) || 0;
+    const fontSize = parseInt(document.getElementById('adminFontSize').value) || 30;
+    const fontColor = document.getElementById('adminFontColor').value || '#000000';
+    const fontFamily = document.getElementById('adminFontFamily').value || 'Arial';
+
+    context.fillStyle = fontColor;
+    context.font = `bold ${fontSize}px ${fontFamily}`; // Added px unit
+    context.fillText("Your Name", x, y);
 }
 
 // --- Helper Functions (Shared) ---
@@ -330,16 +444,17 @@ function handleAdminCanvasClick(event) {
   const yInput = document.getElementById('adminCoordY');
   if (xInput) xInput.value = json_x;
   if (yInput) yInput.value = json_y;
+  redrawAdminCanvasText(); // Update canvas after click
 }
 
 function updateAdminPanelWithCurrentDesignInfo() {
     if (!currentDesign) return;
 
     const nameEl = document.getElementById('adminEditingImageName');
-    const filenameEl = document.getElementById('jsonConfigFilename');
+    const filenameDisplayEl = document.getElementById('jsonConfigFilenameDisplay');
 
     if (nameEl) nameEl.textContent = getImageBasePath(currentEidTheme) + currentDesign;
-    if (filenameEl) filenameEl.textContent = "text_configs.json";
+    if (filenameDisplayEl) filenameDisplayEl.textContent = "text_configs.json"; // Keep this updated
 
     let settingsToDisplay = { fontSize: 30, x: 50, y: 50, defaultColor: '#000000' };
 
@@ -360,6 +475,13 @@ function updateAdminPanelWithCurrentDesignInfo() {
     if (yInput) yInput.value = settingsToDisplay.y || 0;
     if (fontSizeInput) fontSizeInput.value = settingsToDisplay.fontSize || 30;
     if (fontColorInput) fontColorInput.value = settingsToDisplay.defaultColor || '#000000';
+
+    // After updating inputs from config, if an image is loaded, redraw text
+    // This ensures that if a config is loaded, the preview matches it.
+    // No, this is not the right place. loadAdminImage calls this, then redrawAdminCanvasText.
+    // if (currentAdminImageObject && mainCanvas && mainCanvas.id === 'adminCanvas') {
+    //   redrawAdminCanvasText();
+    // }
 }
 
 function generateAdminJsonConfig() {
@@ -368,7 +490,7 @@ function generateAdminJsonConfig() {
   const coordYEl = document.getElementById('adminCoordY');
   const fontColorEl = document.getElementById('adminFontColor');
   const outputEl = document.getElementById('generatedJsonOutput');
-  const filenameHintEl = document.getElementById('jsonConfigFilename');
+  const filenameHintEl = document.getElementById('jsonConfigFilenameDisplay'); // Use updated ID
 
   const config = {
     fontSize: parseInt(fontSizeEl ? fontSizeEl.value : 30) || 30,
@@ -376,43 +498,144 @@ function generateAdminJsonConfig() {
     y: parseInt(coordYEl ? coordYEl.value : 0) || 0,
     defaultColor: fontColorEl ? fontColorEl.value : '#000000'
   };
-  if (outputEl) outputEl.value = JSON.stringify(config, null, 2);
+  if (outputEl) {
+    outputEl.value = `"${currentDesign}": ${JSON.stringify(config, null, 2)}`;
+    alert("JSON snippet for this design generated in the text area. Remember to include the image name as the key and place it under the correct theme in text_configs.json");
+  }
   if (filenameHintEl) filenameHintEl.textContent = "text_configs.json";
+}
+
+// function updateFullJsonOutput() { // Replaced by saveFullConfiguration
+//     const outputEl = document.getElementById('generatedJsonOutput');
+//     const defaultUserThemeSelect = document.getElementById('defaultUserThemeSelect');
+
+//     if (allTextConfigs && defaultUserThemeSelect && outputEl) {
+//         allTextConfigs.defaultThemeForUser = defaultUserThemeSelect.value;
+//         outputEl.value = JSON.stringify(allTextConfigs, null, 2);
+//         alert("Full JSON configuration (including default user theme) updated in the text area. Copy this entire content and replace text_configs.json with it.");
+//     } else {
+//         console.error("Could not update full JSON output. Elements missing or allTextConfigs not loaded.");
+//         alert("Error: Could not generate full JSON. Check console.");
+//     }
+// }
+
+async function saveFullConfiguration() {
+    console.log("Attempting to save full configuration...");
+    const outputEl = document.getElementById('generatedJsonOutput');
+    const defaultUserThemeSelect = document.getElementById('defaultUserThemeSelect');
+
+    if (!allTextConfigs) {
+        alert("Error: Configuration data is not loaded. Cannot save.");
+        console.error("saveFullConfiguration: allTextConfigs is null.");
+        return;
+    }
+
+    // 1. Update defaultThemeForUser from the dropdown
+    if (defaultUserThemeSelect) {
+        allTextConfigs.defaultThemeForUser = defaultUserThemeSelect.value;
+    } else {
+        alert("Error: Default theme selector not found. Cannot save.");
+        console.error("saveFullConfiguration: defaultUserThemeSelect element not found.");
+        return;
+    }
+
+    // 2. Update text configuration for the currently active/displayed image
+    //    currentEidTheme (for admin editing context) and currentDesign should be up-to-date
+    if (currentDesign && currentEidTheme && allTextConfigs[currentEidTheme]) {
+        const adminCoordXInput = document.getElementById('adminCoordX');
+        const adminCoordYInput = document.getElementById('adminCoordY');
+        const adminFontSizeInput = document.getElementById('adminFontSize');
+        const adminFontColorInput = document.getElementById('adminFontColor');
+
+        const currentImageConfig = {
+            x: parseInt(adminCoordXInput.value) || 0,
+            y: parseInt(adminCoordYInput.value) || 0,
+            fontSize: parseInt(adminFontSizeInput.value) || 30,
+            defaultColor: adminFontColorInput.value || '#000000'
+        };
+
+        // Ensure the theme object and design entry exist before assigning
+        if (!allTextConfigs[currentEidTheme]) {
+            allTextConfigs[currentEidTheme] = {};
+        }
+        allTextConfigs[currentEidTheme][currentDesign] = currentImageConfig;
+        console.log(`Updated config for ${currentEidTheme}/${currentDesign}:`, currentImageConfig);
+    } else {
+        console.warn("saveFullConfiguration: No current design/theme selected for saving text config, or theme object missing. Only default user theme will be updated in allTextConfigs.");
+        // Not necessarily an error if admin only wanted to change default theme and not touch an image.
+    }
+
+    // 3. Display the config that will be sent (optional, good for debugging)
+    if (outputEl) {
+        outputEl.value = JSON.stringify(allTextConfigs, null, 2);
+    }
+
+    // 4. Send to server
+    try {
+        const response = await fetch('api/save_config.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(allTextConfigs)
+        });
+
+        const result = await response.json(); // Try to parse JSON response from server
+
+        if (response.ok && result.success) {
+            alert("Configuration saved successfully!");
+            console.log("Configuration saved successfully:", result);
+        } else {
+            const errorMessage = result.error || (result.validation_errors ? JSON.stringify(result.validation_errors) : "Unknown error saving configuration.");
+            alert(`Error saving configuration: ${errorMessage}`);
+            console.error("Error saving configuration:", result);
+        }
+    } catch (error) {
+        alert("Fatal error sending configuration. Check console for details.");
+        console.error("Fatal error sending configuration:", error);
+    }
 }
 
 // --- Core Drawing and Settings Logic (Shared) ---
 function setTextSettings(designName, scaleFactor, userSelectedFontColor, fontName) {
   let designSpecificConfig = null;
-  const fallbackSettings = { fontSize: 30, x: 50, y: 50, defaultColor: '#000000' };
+  const fallbackSettings = { fontSize: 30, x: 50, y: 50, defaultColor: '#000000' }; // Default values
 
-  if (!allTextConfigs) {
-    console.error("setTextSettings: allTextConfigs is not loaded. Using fallback.");
-    designSpecificConfig = { ...fallbackSettings };
-  } else if (allTextConfigs[currentEidTheme]) {
-    designSpecificConfig = allTextConfigs[currentEidTheme][designName];
-    if (currentEidTheme === 'adha' && !designSpecificConfig && designName.match(/Eid(1[0-5])\.jpeg/)) {
-        designSpecificConfig = allTextConfigs.fitr ? allTextConfigs.fitr[designName] : null;
-    }
+  // Prioritize loaded configurations if available
+  if (allTextConfigs && allTextConfigs[currentEidTheme]) {
+      designSpecificConfig = allTextConfigs[currentEidTheme][designName];
+      // Fallback for Adha images (1-15) to Fitr config if Adha specific is missing
+      if (currentEidTheme === 'adha' && !designSpecificConfig && designName && designName.match(/Eid(1[0-5])\.jpeg/)) {
+          designSpecificConfig = allTextConfigs.fitr ? allTextConfigs.fitr[designName] : null;
+      }
   }
 
+  // If no specific configuration found after checking theme and fallback, use defaults
   if (!designSpecificConfig) {
-    designSpecificConfig = { ...fallbackSettings };
+      designSpecificConfig = { ...fallbackSettings }; // Use a copy of fallback
+  } else {
+      // Ensure all properties exist, even if config is sparse, by merging with fallback
+      designSpecificConfig = { ...fallbackSettings, ...designSpecificConfig };
   }
-
-  designSpecificConfig.fontSize = designSpecificConfig.fontSize || fallbackSettings.fontSize;
-  designSpecificConfig.x = designSpecificConfig.x || fallbackSettings.x;
-  designSpecificConfig.y = designSpecificConfig.y || fallbackSettings.y;
-  designSpecificConfig.defaultColor = designSpecificConfig.defaultColor || fallbackSettings.defaultColor;
 
   let finalColor = userSelectedFontColor;
-  if (userSelectedFontColor === '#000000') { finalColor = designSpecificConfig.defaultColor; }
+  // If the user-selected color is black (default from color picker),
+  // and a specific defaultColor is set in the config, prefer the config's defaultColor.
+  // This allows designs to have a non-black default that isn't overridden unless the user explicitly changes the color picker.
+  if (userSelectedFontColor === '#000000' && designSpecificConfig.defaultColor) {
+      finalColor = designSpecificConfig.defaultColor;
+  }
+
 
   return {
-    color: finalColor,
+    color: finalColor, // The color to actually use for drawing
     fontSize: (designSpecificConfig.fontSize * scaleFactor) + 'px',
     x: (designSpecificConfig.x * scaleFactor),
     y: (designSpecificConfig.y * scaleFactor),
-    fontFamily: fontName
+    fontFamily: fontName,
+    // Also return the original defaultColor from config, so admin panel can show it
+    // This is useful if the userSelectedFontColor caused finalColor to be different
+    originalDefaultColor: designSpecificConfig.defaultColor
   };
 }
 
